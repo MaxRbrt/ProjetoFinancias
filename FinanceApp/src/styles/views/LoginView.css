@@ -1,0 +1,377 @@
+/* ============================================================
+   LOGIN VIEW STYLES
+   Login, Cadastro e Modais de Autenticação
+   ============================================================ */
+
+/* ════════════════════════════════════════════════════════════
+   CONTAINER PRINCIPAL
+   ════════════════════════════════════════════════════════════ */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(12, 21, 24, 0.92);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 36px 32px;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  background-size: 200% 100%;
+  animation: borderFlow 4s linear infinite;
+}
+
+@keyframes borderFlow {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   LOGO
+   ════════════════════════════════════════════════════════════ */
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo-icon {
+  display: block;
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+  animation: bounce 2.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.logo-text {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ════════════════════════════════════════════════════════════
+   FORMULÁRIO
+   ════════════════════════════════════════════════════════════ */
+.login-form {
+  display: grid;
+  gap: 4px;
+}
+
+.form-titulo {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding: 0;
+  border: none;
+}
+
+.form-titulo::after {
+  display: none;
+}
+
+/* Botão voltar */
+.btn-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted) !important;
+  font-size: 0.8rem !important;
+  padding: 0 0 12px 0 !important;
+  margin: -8px 0 0 -4px;
+  box-shadow: none !important;
+  justify-content: flex-start;
+  width: fit-content;
+}
+
+.btn-voltar::before {
+  display: none !important;
+}
+
+.btn-voltar:hover {
+  color: var(--accent) !important;
+  transform: translateX(-3px) !important;
+}
+
+/* Link trocar de tela */
+.login-switch {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.login-switch span {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s;
+}
+
+.login-switch span:hover {
+  opacity: 0.8;
+}
+
+/* Botão principal */
+.btn-full {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 14px !important;
+}
+
+/* Força da senha */
+.senha-forca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: -8px;
+  margin-bottom: 4px;
+}
+
+.forca-barra {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  transition: all 0.4s ease;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.forca-fraca { background: var(--danger); }
+.forca-media { background: var(--warning); }
+.forca-forte { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
+.forca-texto { font-size: 0.78rem; white-space: nowrap; }
+
+/* ════════════════════════════════════════════════════════════
+   LINK ESQUECEU SENHA
+   ════════════════════════════════════════════════════════════ */
+.login-esqueceu {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: -8px;
+}
+
+.login-esqueceu span {
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.login-esqueceu span:hover {
+  color: var(--accent);
+}
+
+/* ════════════════════════════════════════════════════════════
+   ANIMAÇÕES DE TRANSIÇÃO
+   ════════════════════════════════════════════════════════════ */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL SUCESSO - FULLSCREEN
+   ════════════════════════════════════════════════════════════ */
+.modal-sucesso-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 13, 15, 0.95);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-sucesso-card {
+  background: rgba(12, 21, 24, 0.98);
+  border: 1px solid rgba(0, 214, 143, 0.3);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  box-shadow:
+    0 0 80px rgba(0, 214, 143, 0.15),
+    0 32px 64px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-sucesso-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+}
+
+.modal-sucesso-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0, 214, 143, 0.08) 0%, transparent 60%);
+  animation: pulseGlow 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.sucesso-icone {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: popScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes popScale {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-sucesso-card h2 {
+  font-size: 1.4rem;
+  color: var(--accent);
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.sucesso-mensagem {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.sucesso-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Botão continuar */
+.btn-continuar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  justify-content: center;
+  padding: 14px 28px !important;
+  font-size: 1rem !important;
+  margin-top: 8px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL RESET SENHA - BOTÕES
+   ════════════════════════════════════════════════════════════ */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-actions button:not(.secondary) {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+}
+
+.modal-actions button:not(.secondary):hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 214, 143, 0.3);
+}
+
+.modal-actions button.secondary {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--glass-border);
+}
+
+.modal-actions button.secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+/* ════════════════════════════════════════════════════════════
+   FADE DO MODAL
+   ════════════════════════════════════════════════════════════ */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
