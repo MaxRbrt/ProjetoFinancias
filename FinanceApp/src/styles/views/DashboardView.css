@@ -1,0 +1,245 @@
+/* ============================================================
+   DASHBOARD VIEW STYLES
+   Resumo financeiro, gráficos e análises
+   ============================================================ */
+
+/* ════════════════════════════════════════════════════════════
+   CARDS RESUMO
+   ════════════════════════════════════════════════════════════ */
+.resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.resumo-card {
+  padding: 18px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: transform 0.2s;
+}
+
+.resumo-card:hover { transform: translateY(-3px); }
+
+.card-verde          { background: rgba(0,214,143,0.12); border: 1px solid rgba(0,214,143,0.25); }
+.card-vermelho       { background: rgba(255,80,80,0.12); border: 1px solid rgba(255,80,80,0.25); }
+.card-verde-suave    { background: rgba(0,214,143,0.06); border: 1px solid rgba(0,214,143,0.15); }
+.card-vermelho-suave { background: rgba(255,80,80,0.06); border: 1px solid rgba(255,80,80,0.15); }
+
+.resumo-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.resumo-valor {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+}
+
+.resumo-valor.valor-receita { color: var(--success); }
+.resumo-valor.valor-despesa { color: var(--danger); }
+.resumo-sub { font-size: 0.75rem; }
+
+/* ════════════════════════════════════════════════════════════
+   ANÁLISE AUTOMÁTICA
+   ════════════════════════════════════════════════════════════ */
+.analise-box {
+  background: rgba(0,214,143,0.05);
+  border: 1px solid rgba(0,214,143,0.15);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 8px 0 20px;
+}
+
+.analise-lista {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.analise-lista li {
+  font-size: 0.9rem;
+  color: var(--text-soft);
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+  animation: none;
+  border-bottom: none;
+}
+
+.analise-lista li:hover { transform: none; background: rgba(255,255,255,0.03); }
+
+/* ════════════════════════════════════════════════════════════
+   GRÁFICO COLUNAS (MESES)
+   ════════════════════════════════════════════════════════════ */
+.grafico-meses {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 160px;
+  margin-bottom: 30px;
+  padding-bottom: 24px;
+  position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.grafico-mes-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.barras-col {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  width: 100%;
+  justify-content: center;
+}
+
+.barra-col-wrap {
+  flex: 1;
+  height: 120px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.barra-col {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  min-height: 3px;
+  transition: height 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+
+.barra-receita { background: linear-gradient(180deg, var(--accent), var(--accent2)); }
+.barra-despesa { background: linear-gradient(180deg, #ff5050, #cc2222); }
+
+.mes-nome {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.grafico-legenda {
+  position: absolute;
+  bottom: -2px; right: 0;
+  display: flex; gap: 16px;
+}
+
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.leg-cor {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.receita-bg { background: var(--accent); }
+.despesa-bg { background: var(--danger); }
+
+/* ════════════════════════════════════════════════════════════
+   GRÁFICO CATEGORIAS
+   ════════════════════════════════════════════════════════════ */
+.grafico-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.grafico-linha {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.grafico-nome {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.barra {
+  height: 16px;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+  min-width: 4px;
+}
+
+.barra-despesa-h {
+  background: linear-gradient(90deg, #ff5050, #cc2222);
+  box-shadow: 0 0 8px rgba(255,80,80,0.25);
+  flex: 1;
+}
+
+.barra-valor {
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LISTA TRANSAÇÕES
+   ════════════════════════════════════════════════════════════ */
+.transacao-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  gap: 12px;
+}
+
+.transacao-item:last-child { border-bottom: none; }
+
+.transacao-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.transacao-desc {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.93rem;
+}
+
+.transacao-valor {
+  font-weight: 700;
+  font-size: 0.93rem;
+  white-space: nowrap;
+}
+
+.valor-receita { color: var(--success) !important; }
+.valor-despesa { color: var(--danger) !important; }
