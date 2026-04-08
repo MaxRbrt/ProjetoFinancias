@@ -1,0 +1,208 @@
+/* ============================================================
+   METAS VIEW STYLES
+   Metas financeiras com progresso e depósitos
+   ============================================================ */
+
+/* ════════════════════════════════════════════════════════════
+   HEADER
+   ════════════════════════════════════════════════════════════ */
+.topo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SALDO INFO
+   ════════════════════════════════════════════════════════════ */
+.saldo-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  margin: 14px 0;
+  font-size: 0.9rem;
+}
+
+.saldo-valor {
+  font-weight: 800;
+  font-size: 1.1rem;
+  font-family: 'DM Mono', monospace;
+}
+
+/* ════════════════════════════════════════════════════════════
+   FORMULÁRIO NOVA META
+   ════════════════════════════════════════════════════════════ */
+.form-meta {
+  margin: 14px 0;
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  animation: fadeUp 0.3s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LISTA DE METAS
+   ════════════════════════════════════════════════════════════ */
+.metas-lista {
+  display: grid;
+  gap: 14px;
+}
+
+.meta-card {
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+  animation: itemIn 0.4s ease both;
+}
+
+.meta-card:hover {
+  border-color: rgba(0,214,143,0.2);
+  transform: translateY(-2px);
+}
+
+@keyframes itemIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.meta-nome {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.badge-concluida {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  background: rgba(0,214,143,0.12);
+  border: 1px solid rgba(0,214,143,0.25);
+  border-radius: 999px;
+  color: var(--accent);
+}
+
+/* ════════════════════════════════════════════════════════════
+   BARRA DE PROGRESSO
+   ════════════════════════════════════════════════════════════ */
+.progresso-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.progresso-barra {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progresso-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+  box-shadow: 0 0 8px rgba(0,214,143,0.3);
+}
+
+.progresso-perc {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.meta-valores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.meta-alerta {
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+
+.btn-depositar {
+  font-size: 0.8rem !important;
+  padding: 7px 14px !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BOTÃO ÍCONE
+   ════════════════════════════════════════════════════════════ */
+.btn-icone {
+  padding: 7px 10px !important;
+  font-size: 0.8rem !important;
+  background: rgba(255,255,255,0.04) !important;
+  color: var(--text-soft) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.btn-icone::before { display: none !important; }
+
+.btn-icone.danger:hover {
+  background: var(--danger-dim) !important;
+  color: var(--danger) !important;
+  border-color: rgba(255,80,80,0.3) !important;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MODAL DEPÓSITO
+   ════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  max-width: 420px;
+  width: 100%;
+  animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
