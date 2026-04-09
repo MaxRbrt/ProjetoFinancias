@@ -8,19 +8,23 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase/config'
 
 export const useAuthStore = defineStore('auth', {
-
   state: () => ({
-    user: null,        // Dados do usuário logado (ou null)
-    authIsReady: false // Firebase já verificou o estado?
+    user: null,
+    authIsReady: false
   }),
 
   actions: {
+    // Mantém o usuário sincronizado com o retorno do Firebase Auth.
     setUser(user) {
       this.user = user
     },
+
+    // Marca que o ciclo inicial de autenticação já foi resolvido.
     setAuthReady() {
       this.authIsReady = true
     },
+
+    // Faz logout no Firebase e limpa o estado local.
     async logout() {
       await signOut(auth)
       this.user = null

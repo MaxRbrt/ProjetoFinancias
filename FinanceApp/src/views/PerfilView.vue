@@ -15,6 +15,11 @@ import {
 import { auth } from '../firebase/config'
 import { useAuthStore } from '../stores/authStore'
 import '../styles/views/PerfilView.css'
+import {
+  readUserJson,
+  readUserValue,
+  writeUserValue
+} from '../utils/appData'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -50,7 +55,7 @@ const confirmaSenha = ref('')
 const msgSucesso = ref('')
 const msgErro = ref('')
 
-// Iniciais para avatar
+// Gera as iniciais exibidas no avatar quando não há foto.
 const iniciais = computed(() => {
   if (nome.value) {
     const partes = nome.value.trim().split(' ')
@@ -60,7 +65,7 @@ const iniciais = computed(() => {
   return email.value ? email.value.charAt(0).toUpperCase() : '?'
 })
 
-// ── Carregar dados (instantâneo!) ──
+// Carrega informações do usuário e estatísticas simples salvas localmente.
 const carregarDados = () => {
   if (!authStore.user) {
     router.push('/login')
@@ -71,33 +76,31 @@ const carregarDados = () => {
   nome.value = authStore.user.displayName || ''
 
   // Foto vem do localStorage
-  fotoURL.value = localStorage.getItem(`user_${authStore.user.uid}_foto`) || ''
+  fotoURL.value = readUserValue(authStore.user.uid, 'foto', '')
 
   // Celular vem do localStorage
-  celular.value = localStorage.getItem(`user_${authStore.user.uid}_celular`) || 'Não informado'
+  celular.value = readUserValue(authStore.user.uid, 'celular', 'Não informado')
 
   // Data de cadastro do localStorage
-  membroDesde.value = localStorage.getItem(`user_${authStore.user.uid}_criadoEm`) || ''
+  membroDesde.value = readUserValue(authStore.user.uid, 'criadoEm', '')
 
   // Contagem de transações/metas do localStorage
   try {
-    const transacoesData = localStorage.getItem(`user_${authStore.user.uid}_transacoes`)
-    const transacoesArray = transacoesData ? JSON.parse(transacoesData) : []
+    const transacoesArray = readUserJson(authStore.user.uid, 'transacoes', [])
     totalTransacoes.value = Array.isArray(transacoesArray) ? transacoesArray.length : 0
   } catch (e) {
     totalTransacoes.value = 0
   }
 
   try {
-    const metasData = localStorage.getItem(`user_${authStore.user.uid}_metas`)
-    const metasArray = metasData ? JSON.parse(metasData) : []
+    const metasArray = readUserJson(authStore.user.uid, 'metas', [])
     totalMetas.value = Array.isArray(metasArray) ? metasArray.length : 0
   } catch (e) {
     totalMetas.value = 0
   }
 }
 
-// ── Upload de foto (base64 no localStorage - instantâneo!) ──
+// Permite selecionar uma foto e armazená-la localmente em base64.
 const selecionarFoto = () => {
   const input = document.createElement('input')
   input.type = 'file'
@@ -122,7 +125,7 @@ const selecionarFoto = () => {
         const base64 = event.target.result
 
         // Salvar no localStorage
-        localStorage.setItem(`user_${authStore.user.uid}_foto`, base64)
+        writeUserValue(authStore.user.uid, 'foto', base64)
 
         // Atualizar estado local
         fotoURL.value = base64
@@ -141,7 +144,7 @@ const selecionarFoto = () => {
   input.click()
 }
 
-// ── Máscara celular ──
+// Formata o celular digitado no padrão brasileiro.
 const formatarCelular = (e) => {
   let v = e.target.value.replace(/\D/g, '')
   if (v.length <= 11) {
@@ -151,7 +154,7 @@ const formatarCelular = (e) => {
   editCelular.value = v
 }
 
-// ── Salvar nome ──
+// Atualiza o nome do usuário no Firebase Auth e no estado local.
 const salvarNome = async () => {
   if (!editNome.value.trim()) {
     msgErro.value = 'O nome não pode estar vazio'
@@ -179,7 +182,7 @@ const salvarNome = async () => {
   salvandoNome.value = false
 }
 
-// ── Salvar celular ──
+// Salva o celular apenas no armazenamento local do usuário.
 const salvarCelular = () => {
   const limpo = editCelular.value.replace(/\D/g, '')
   if (limpo.length > 0 && limpo.length < 10) {
@@ -189,14 +192,14 @@ const salvarCelular = () => {
   }
 
   // Salvar no localStorage
-  localStorage.setItem(`user_${authStore.user.uid}_celular`, editCelular.value || 'Não informado')
+  writeUserValue(authStore.user.uid, 'celular', editCelular.value || 'Não informado')
 
   celular.value = editCelular.value || 'Não informado'
   editandoCelular.value = false
   mostrarSucesso('Celular atualizado!')
 }
 
-// ── Salvar senha ──
+// Reautentica o usuário antes de alterar a senha.
 const salvarSenha = async () => {
   msgErro.value = ''
 
@@ -243,13 +246,13 @@ const salvarSenha = async () => {
   salvandoSenha.value = false
 }
 
-// ── Mostrar sucesso ──
+// Exibe mensagens breves de sucesso para feedback visual.
 const mostrarSucesso = (msg) => {
   msgSucesso.value = msg
   setTimeout(() => msgSucesso.value = '', 3000)
 }
 
-// ── Iniciar edição ──
+// Prepara os campos de edição sem persistir nada ainda.
 const iniciarEdicaoNome = () => {
   editNome.value = nome.value
   editandoNome.value = true

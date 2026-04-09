@@ -47,7 +47,7 @@ const resetErro        = ref('')
 const resetSucesso     = ref(false)
 const resetCarregando  = ref(false)
 
-// Máscara celular
+// Aplica máscara simples no celular durante o cadastro.
 const formatarCelular = (e) => {
   let v = e.target.value.replace(/\D/g, '')
   if (v.length <= 11) {
@@ -57,7 +57,7 @@ const formatarCelular = (e) => {
   cadCelular.value = v
 }
 
-// ── LOGIN ──
+// Faz login com Firebase Auth e redireciona para o dashboard.
 const entrar = async () => {
   loginErro.value = ''
   if (!loginEmail.value || !loginSenha.value) {
@@ -75,7 +75,7 @@ const entrar = async () => {
   }
 }
 
-// ── Ir para cadastro ──
+// Troca a interface para o modo de cadastro limpando estados anteriores.
 const irParaCadastro = () => {
   modo.value = 'cadastro'
   loginErro.value = ''
@@ -87,13 +87,13 @@ const irParaCadastro = () => {
   cadErro.value = ''
 }
 
-// ── Continuar após sucesso ──
+// Fecha o modal de sucesso e segue para a área logada.
 const continuarAposSucesso = () => {
   modalSucesso.value = false
   router.push('/')
 }
 
-// ── Voltar para login ──
+// Retorna para o modo de login e reseta os campos principais.
 const voltarParaLogin = () => {
   modo.value = 'login'
   cadErro.value = ''
@@ -102,7 +102,7 @@ const voltarParaLogin = () => {
   loginErro.value = ''
 }
 
-// ── CADASTRO ──
+// Cria a conta, atualiza o perfil público e salva dados locais simples.
 const registrar = async () => {
   cadErro.value = ''
 
@@ -170,7 +170,7 @@ const registrar = async () => {
   }
 }
 
-// ── REDEFINIR SENHA ──
+// Prepara o modal de recuperação de senha.
 const abrirResetSenha = () => {
   resetEmail.value   = ''
   resetErro.value    = ''
@@ -178,6 +178,7 @@ const abrirResetSenha = () => {
   modalReset.value   = true
 }
 
+// Dispara o e-mail de redefinição usando o Firebase Auth.
 const enviarResetSenha = async () => {
   resetErro.value = ''
   if (!resetEmail.value) {
@@ -195,6 +196,7 @@ const enviarResetSenha = async () => {
   }
 }
 
+// Fecha e limpa o modal de redefinição.
 const fecharResetSenha = () => {
   modalReset.value   = false
   resetSucesso.value = false
@@ -205,6 +207,10 @@ const fecharResetSenha = () => {
 <template>
   <div class="login-wrapper">
     <div class="login-box">
+      <div class="login-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        Ambiente seguro
+      </div>
 
       <!-- Logo -->
       <div class="login-logo">
@@ -221,12 +227,18 @@ const fecharResetSenha = () => {
 
           <label class="field">
             E-mail
-            <input v-model="loginEmail" type="email" placeholder="seu@email.com" @keyup.enter="entrar" />
+            <span class="input-shell">
+              <i class="fa-regular fa-envelope input-icon"></i>
+              <input v-model="loginEmail" type="email" placeholder="seu@email.com" @keyup.enter="entrar" />
+            </span>
           </label>
 
           <label class="field">
             Senha
-            <input v-model="loginSenha" type="password" placeholder="sua senha" @keyup.enter="entrar" />
+            <span class="input-shell">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input v-model="loginSenha" type="password" placeholder="sua senha" @keyup.enter="entrar" />
+            </span>
           </label>
 
           <p v-if="loginErro" class="error">
@@ -259,33 +271,48 @@ const fecharResetSenha = () => {
 
           <label class="field">
             Nome completo
-            <input v-model="cadNome" type="text" placeholder="Seu nome" />
+            <span class="input-shell">
+              <i class="fa-regular fa-user input-icon"></i>
+              <input v-model="cadNome" type="text" placeholder="Seu nome" />
+            </span>
           </label>
 
           <label class="field">
             E-mail
-            <input v-model="cadEmail" type="email" placeholder="seu@email.com" />
+            <span class="input-shell">
+              <i class="fa-regular fa-envelope input-icon"></i>
+              <input v-model="cadEmail" type="email" placeholder="seu@email.com" />
+            </span>
           </label>
 
           <label class="field">
             Celular (opcional)
-            <input
-              :value="cadCelular"
-              @input="formatarCelular"
-              type="tel"
-              placeholder="(11) 99999-9999"
-              maxlength="15"
-            />
+            <span class="input-shell">
+              <i class="fa-solid fa-phone input-icon"></i>
+              <input
+                :value="cadCelular"
+                @input="formatarCelular"
+                type="tel"
+                placeholder="(11) 99999-9999"
+                maxlength="15"
+              />
+            </span>
           </label>
 
           <label class="field">
             Senha
-            <input v-model="cadSenha" type="password" placeholder="mínimo 6 caracteres" />
+            <span class="input-shell">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input v-model="cadSenha" type="password" placeholder="mínimo 6 caracteres" />
+            </span>
           </label>
 
           <label class="field">
             Confirmar senha
-            <input v-model="cadConfirma" type="password" placeholder="repita a senha" @keyup.enter="registrar" />
+            <span class="input-shell">
+              <i class="fa-solid fa-shield-check input-icon"></i>
+              <input v-model="cadConfirma" type="password" placeholder="repita a senha" @keyup.enter="registrar" />
+            </span>
           </label>
 
           <div v-if="cadSenha" class="senha-forca">
@@ -343,12 +370,15 @@ const fecharResetSenha = () => {
 
           <label class="field" style="text-align: left">
             E-mail
-            <input
-              v-model="resetEmail"
-              type="email"
-              placeholder="seu@email.com"
-              @keyup.enter="enviarResetSenha"
-            />
+            <span class="input-shell">
+              <i class="fa-regular fa-envelope input-icon"></i>
+              <input
+                v-model="resetEmail"
+                type="email"
+                placeholder="seu@email.com"
+                @keyup.enter="enviarResetSenha"
+              />
+            </span>
           </label>
 
           <p v-if="resetErro" class="error">

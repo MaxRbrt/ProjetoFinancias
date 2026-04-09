@@ -30,7 +30,7 @@ const router = createRouter({
 
 export default router
 
-// Guard: verifica autenticação antes de cada rota
+// Impede acesso às rotas protegidas quando não há usuário autenticado.
 router.beforeEach((to, from, next) => {
   const requiresAuth    = to.matched.some(r => r.meta.requiresAuth)
   const isAuthenticated = auth.currentUser

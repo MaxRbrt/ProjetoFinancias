@@ -1,113 +1,148 @@
 <script setup>
-// ============================================================
-// ARQUIVO: views/TransacoesView.vue
-// CRUD completo + filtros avançados
-// Armazenamento: localStorage (instantâneo, sem Firestore)
-// ============================================================
-
-import { ref, computed, onMounted, watch } from 'vue'
+// Tela de transações: cadastro, filtros, categorias e histórico.
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useAuthStore } from '../stores/authStore'
+import '../styles/views/TransacoesView.css'
+import {
+  DATA_CHANGE_EVENT,
+  formatCurrencyBRL,
+  generateId,
+  notifyFinanceDataChanged,
+  readUserJson,
+  writeUserJson
+} from '../utils/appData'
 
 const authStore = useAuthStore()
+const CATEGORIAS_PADRAO = [
+  'Salário',
+  'Freelance',
+  'Investimentos',
+  'Vendas',
+  'Renda extra',
+  'Moradia',
+  'Alimentação',
+  'Transporte',
+  'Contas',
+  'Lazer',
+  'Saúde',
+  'Educação',
+  'Assinaturas',
+  'Compras',
+  'Impostos',
+  'Outros'
+]
 
-// ── Formulário nova transação ──
 const descricao = ref('')
-const valor     = ref('')
-const tipo      = ref('despesa')
+const valor = ref('')
+const tipo = ref('despesa')
 const categoria = ref('')
-const erro      = ref('')
+const erro = ref('')
+const mostrarFormulario = ref(false)
 
-// ── Lista ──
 const transacoes = ref([])
 
-// ── Filtros ──
-const filtroBusca     = ref('')
-const filtroTipo      = ref('todos')
+const filtroBusca = ref('')
+const filtroTipo = ref('todos')
 const filtroCategoria = ref('todas')
-const filtroDataDe    = ref('')
-const filtroDataAte   = ref('')
+const filtroDataDe = ref('')
+const filtroDataAte = ref('')
 
-// ── Categorias ──
-const categorias        = ref([])
-const novaCategoria     = ref('')
-const erroCategoria     = ref('')
-const mostrarCategorias = ref(false)
+const categorias = ref([])
+const novaCategoria = ref('')
+const erroCategoria = ref('')
+const modalCategorias = ref(false)
 
-// ── Modal edição ──
-const modalAberto   = ref(false)
-const editId        = ref('')
+const modalAberto = ref(false)
+const editId = ref('')
 const editDescricao = ref('')
-const editValor     = ref('')
-const editTipo      = ref('')
+const editValor = ref('')
+const editTipo = ref('')
 const editCategoria = ref('')
-const erroModal     = ref('')
+const erroModal = ref('')
 
-// ── Chave do localStorage por usuário ──
-const getStorageKey = (type) => `user_${authStore.user?.uid}_${type}`
+const normalizarCategoria = (nome) => nome.trim().toLowerCase()
 
-// ── Carregar dados do localStorage ──
+// Cria uma base inicial de categorias para o usuário começar rápido.
+const criarCategoriasPadrao = () =>
+  CATEGORIAS_PADRAO.map(nome => ({
+    id: gerarId(),
+    nome,
+    userId: authStore.user?.uid || ''
+  }))
+
+// Mescla categorias padrão com categorias já salvas sem duplicar nomes.
+const combinarCategorias = (categoriasSalvas = []) => {
+  const mapa = new Map()
+
+  categoriasSalvas.forEach((categoria) => {
+    if (!categoria?.nome) return
+    mapa.set(normalizarCategoria(categoria.nome), categoria)
+  })
+
+  CATEGORIAS_PADRAO.forEach((nome) => {
+    const chave = normalizarCategoria(nome)
+    if (!mapa.has(chave)) {
+      mapa.set(chave, {
+        id: gerarId(),
+        nome,
+        userId: authStore.user?.uid || ''
+      })
+    }
+  })
+
+  return Array.from(mapa.values())
+}
+
+// Carrega transações e categorias do usuário atual.
 const carregarDados = () => {
   if (!authStore.user) return
 
   try {
-    // Carregar transações
-    const transacoesSalvas = localStorage.getItem(getStorageKey('transacoes'))
-    if (transacoesSalvas) {
-      const parsed = JSON.parse(transacoesSalvas)
-      // Garantir que valor é número
-      transacoes.value = parsed.map(t => ({
-        ...t,
-        valor: Number(t.valor) || 0
-      }))
-    } else {
-      transacoes.value = []
-    }
+    const transacoesSalvas = readUserJson(authStore.user.uid, 'transacoes', [])
+    transacoes.value = transacoesSalvas
+      ? transacoesSalvas.map(t => ({ ...t, valor: Number(t.valor) || 0 }))
+      : []
   } catch (e) {
-    console.error('Erro ao carregar transações:', e)
+    console.error('Erro ao carregar transacoes:', e)
     transacoes.value = []
   }
 
   try {
-    // Carregar categorias
-    const categoriasSalvas = localStorage.getItem(getStorageKey('categorias'))
-    categorias.value = categoriasSalvas ? JSON.parse(categoriasSalvas) : []
+    const categoriasSalvas = readUserJson(authStore.user.uid, 'categorias', null)
+    const categoriasBase = categoriasSalvas || criarCategoriasPadrao()
+    categorias.value = combinarCategorias(categoriasBase)
+
+    if (!categoriasSalvas || categorias.value.length !== categoriasBase.length) {
+      salvarCategorias()
+    }
   } catch (e) {
     console.error('Erro ao carregar categorias:', e)
-    categorias.value = []
+    categorias.value = criarCategoriasPadrao()
+    salvarCategorias()
   }
-
-  // Atualizar contagem no localStorage para o perfil
-  localStorage.setItem(getStorageKey('transacoes_count'), transacoes.value.length.toString())
 }
 
-// ── Salvar transações no localStorage ──
+// Persiste transações e notifica outras telas para recalcular os dados.
 const salvarTransacoes = () => {
-  localStorage.setItem(getStorageKey('transacoes'), JSON.stringify(transacoes.value))
-  localStorage.setItem(getStorageKey('transacoes_count'), transacoes.value.length.toString())
+  writeUserJson(authStore.user.uid, 'transacoes', transacoes.value)
+  notifyFinanceDataChanged()
 }
 
-// ── Salvar categorias no localStorage ──
+// Categorias ficam locais à tela, então não precisam disparar sincronização global.
 const salvarCategorias = () => {
-  localStorage.setItem(getStorageKey('categorias'), JSON.stringify(categorias.value))
+  writeUserJson(authStore.user.uid, 'categorias', categorias.value)
 }
 
-// ── Gerar ID único ──
-const gerarId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
+const gerarId = () => generateId()
 
-// ── Computed: transações filtradas ──
-const transacoesFiltradas = computed(() => {
-  return transacoes.value
+// Aplica todos os filtros da listagem e ordena do mais recente para o mais antigo.
+const transacoesFiltradas = computed(() =>
+  transacoes.value
     .filter(t => {
-      // Filtro tipo
       if (filtroTipo.value !== 'todos' && t.tipo !== filtroTipo.value) return false
-
-      // Filtro busca
       if (filtroBusca.value && !t.descricao.toLowerCase().includes(filtroBusca.value.toLowerCase())) return false
-
-      // Filtro categoria
       if (filtroCategoria.value !== 'todas' && t.categoria !== filtroCategoria.value) return false
 
-      // Filtro data
       if (filtroDataDe.value || filtroDataAte.value) {
         const data = new Date(t.criadoEm)
         if (filtroDataDe.value && data < new Date(filtroDataDe.value)) return false
@@ -117,68 +152,132 @@ const transacoesFiltradas = computed(() => {
       return true
     })
     .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm))
+)
+
+// Resumo completo da base de transações.
+const resumoGeral = computed(() => {
+  const receitas = transacoes.value.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0)
+  const despesas = transacoes.value.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0)
+
+  return {
+    receitas,
+    despesas,
+    saldo: receitas - despesas,
+    quantidade: transacoes.value.length
+  }
 })
 
-// Totais das transações filtradas
-const totalFiltrado = computed(() => ({
-  receitas: transacoesFiltradas.value.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0),
-  despesas: transacoesFiltradas.value.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0),
-}))
+// Resumo da visão filtrada para dar contexto à busca atual.
+const totalFiltrado = computed(() => {
+  const receitas = transacoesFiltradas.value.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0)
+  const despesas = transacoesFiltradas.value.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0)
 
-const formatarValor = (v) =>
-  Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return {
+    receitas,
+    despesas,
+    saldo: receitas - despesas,
+    quantidade: transacoesFiltradas.value.length
+  }
+})
+
+const filtrosAtivos = computed(() =>
+  !!filtroBusca.value ||
+  filtroTipo.value !== 'todos' ||
+  filtroCategoria.value !== 'todas' ||
+  !!filtroDataDe.value ||
+  !!filtroDataAte.value
+)
+
+const formatarValor = (v) => formatCurrencyBRL(v)
 
 const formatarData = (ts) => {
   if (!ts) return ''
-  const d = new Date(ts)
-  return d.toLocaleDateString('pt-BR')
+  return new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Identifica movimentações ligadas a cofrinhos para destacar na interface.
+const isMetaMovimentacao = (transacao) =>
+  transacao?.categoria === 'Metas' ||
+  transacao?.categoria === 'Cofrinhos' ||
+  !!transacao?.metaId
+
+// Se a descrição vier vazia, usa a categoria como fallback.
+const resolverDescricao = (descricaoAtual, categoriaAtual) => {
+  const descricaoNormalizada = descricaoAtual.trim()
+  if (descricaoNormalizada) return descricaoNormalizada
+  return categoriaAtual.trim()
 }
 
 const limparFiltros = () => {
-  filtroBusca.value     = ''
-  filtroTipo.value      = 'todos'
+  filtroBusca.value = ''
+  filtroTipo.value = 'todos'
   filtroCategoria.value = 'todas'
-  filtroDataDe.value    = ''
-  filtroDataAte.value   = ''
+  filtroDataDe.value = ''
+  filtroDataAte.value = ''
 }
 
-// ── CREATE transação ──
+const abrirFormulario = () => {
+  mostrarFormulario.value = true
+}
+
+const fecharFormulario = () => {
+  mostrarFormulario.value = false
+  erro.value = ''
+}
+
+// Salva uma nova transação mantendo a regra de descrição opcional.
 const salvar = () => {
   erro.value = ''
-  if (!descricao.value || !valor.value || !categoria.value) {
-    erro.value = 'Preencha todos os campos.'
+  if (!valor.value || !categoria.value) {
+    erro.value = 'Preencha valor e categoria.'
+    mostrarFormulario.value = true
     return
   }
   if (Number(valor.value) <= 0) {
     erro.value = 'O valor deve ser maior que zero.'
+    mostrarFormulario.value = true
     return
   }
 
-  const novaTransacao = {
+  transacoes.value.push({
     id: gerarId(),
-    descricao: descricao.value,
+    descricao: resolverDescricao(descricao.value, categoria.value),
     valor: Number(valor.value),
     tipo: tipo.value,
     categoria: categoria.value,
     userId: authStore.user.uid,
     criadoEm: new Date().toISOString()
-  }
+  })
 
-  transacoes.value.push(novaTransacao)
   salvarTransacoes()
-
   descricao.value = ''
   valor.value = ''
   categoria.value = ''
+  tipo.value = 'despesa'
+  fecharFormulario()
 }
 
-// ── CREATE categoria ──
+// Abre o modal de gerenciamento de categorias.
+const abrirCategorias = () => {
+  modalCategorias.value = true
+  erroCategoria.value = ''
+}
+
+const fecharCategorias = () => {
+  modalCategorias.value = false
+  erroCategoria.value = ''
+}
+
+// Adiciona uma categoria manual sem duplicar nomes existentes.
 const adicionarCategoria = () => {
   erroCategoria.value = ''
   const nome = novaCategoria.value.trim()
-  if (!nome) { erroCategoria.value = 'Digite um nome.'; return }
+  if (!nome) {
+    erroCategoria.value = 'Digite um nome.'
+    return
+  }
   if (categorias.value.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
-    erroCategoria.value = 'Categoria já existe.'
+    erroCategoria.value = 'Categoria ja existe.'
     return
   }
 
@@ -191,27 +290,28 @@ const adicionarCategoria = () => {
   novaCategoria.value = ''
 }
 
-// ── DELETE categoria ──
+// Remove uma categoria personalizada.
 const excluirCategoria = (id) => {
   categorias.value = categorias.value.filter(c => c.id !== id)
   salvarCategorias()
 }
 
-// ── EDITAR ──
+// Preenche o modal de edição com os dados da transação escolhida.
 const abrirEdicao = (t) => {
-  editId.value        = t.id
+  editId.value = t.id
   editDescricao.value = t.descricao
-  editValor.value     = t.valor
-  editTipo.value      = t.tipo
+  editValor.value = t.valor
+  editTipo.value = t.tipo
   editCategoria.value = t.categoria
-  erroModal.value     = ''
-  modalAberto.value   = true
+  erroModal.value = ''
+  modalAberto.value = true
 }
 
+// Atualiza a transação já existente no armazenamento local.
 const salvarEdicao = () => {
   erroModal.value = ''
-  if (!editDescricao.value || !editValor.value || !editCategoria.value) {
-    erroModal.value = 'Preencha todos os campos.'
+  if (!editValor.value || !editCategoria.value) {
+    erroModal.value = 'Preencha valor e categoria.'
     return
   }
   if (Number(editValor.value) <= 0) {
@@ -223,7 +323,7 @@ const salvarEdicao = () => {
   if (index !== -1) {
     transacoes.value[index] = {
       ...transacoes.value[index],
-      descricao: editDescricao.value,
+      descricao: resolverDescricao(editDescricao.value, editCategoria.value),
       valor: Number(editValor.value),
       tipo: editTipo.value,
       categoria: editCategoria.value
@@ -234,25 +334,29 @@ const salvarEdicao = () => {
   modalAberto.value = false
 }
 
-// ── DELETE transação ──
+// Exclui uma transação do histórico principal.
 const excluir = (id) => {
-  if (confirm('Deseja excluir esta transação?')) {
+  if (confirm('Deseja excluir esta transacao?')) {
     transacoes.value = transacoes.value.filter(t => t.id !== id)
     salvarTransacoes()
   }
 }
 
+// Atualiza a tela quando dados mudam em outras views.
 onMounted(() => {
-  if (authStore.user) {
-    carregarDados()
-  }
+  if (authStore.user) carregarDados()
+  window.addEventListener(DATA_CHANGE_EVENT, carregarDados)
+  window.addEventListener('storage', carregarDados)
 })
 
-// Recarregar quando o usuário mudar
+onBeforeUnmount(() => {
+  window.removeEventListener(DATA_CHANGE_EVENT, carregarDados)
+  window.removeEventListener('storage', carregarDados)
+})
+
 watch(() => authStore.user, (newUser) => {
-  if (newUser) {
-    carregarDados()
-  } else {
+  if (newUser) carregarDados()
+  else {
     transacoes.value = []
     categorias.value = []
   }
@@ -260,94 +364,165 @@ watch(() => authStore.user, (newUser) => {
 </script>
 
 <template>
-  <section class="card">
-
-    <div class="topo-header">
-      <div>
+  <section class="transacoes-page">
+    <div class="page-header transacoes-header">
+      <div class="page-header-left">
         <h1><i class="fa-solid fa-list"></i> Transações</h1>
-        <p class="muted">Gerencie suas receitas e despesas</p>
+        <p>Centralize o controle das suas receitas e despesas com filtros, categorias e histórico detalhado.</p>
       </div>
-      <button class="secondary btn-sm" @click="mostrarCategorias = !mostrarCategorias">
+      <button class="secondary btn-sm" @click="abrirCategorias">
         <i class="fa-solid fa-tags"></i>
-        {{ mostrarCategorias ? 'Fechar' : 'Categorias' }}
+        Gerenciar categorias
       </button>
     </div>
 
-    <!-- Gerenciador de categorias -->
-    <div v-if="mostrarCategorias" class="cat-manager">
-      <h3>Minhas Categorias</h3>
-      <div class="cat-form">
-        <input v-model="novaCategoria" placeholder="Nova categoria..." @keyup.enter="adicionarCategoria" />
-        <button @click="adicionarCategoria"><i class="fa-solid fa-plus"></i> Adicionar</button>
-      </div>
-      <p v-if="erroCategoria" class="error"><i class="fa-solid fa-triangle-exclamation"></i> {{ erroCategoria }}</p>
-      <div v-if="categorias.length" class="cat-lista">
-        <div v-for="cat in categorias" :key="cat.id" class="cat-item">
-          <span>{{ cat.nome }}</span>
-          <button class="btn-icone danger" @click="excluirCategoria(cat.id)"><i class="fa-solid fa-trash"></i></button>
+    <div class="transacoes-summary-grid">
+      <article class="summary-card summary-card--green">
+        <span class="summary-icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
+        <div class="summary-body">
+          <span class="summary-label">Receitas</span>
+          <strong class="summary-value valor-receita">{{ formatarValor(resumoGeral.receitas) }}</strong>
+          <span class="summary-sub">Entradas registradas</span>
         </div>
-      </div>
-      <p v-else class="muted">Nenhuma categoria criada ainda.</p>
+      </article>
+
+      <article class="summary-card summary-card--red">
+        <span class="summary-icon"><i class="fa-solid fa-arrow-trend-down"></i></span>
+        <div class="summary-body">
+          <span class="summary-label">Despesas</span>
+          <strong class="summary-value valor-despesa">{{ formatarValor(resumoGeral.despesas) }}</strong>
+          <span class="summary-sub">Saídas registradas</span>
+        </div>
+      </article>
+
+      <article class="summary-card" :class="resumoGeral.saldo >= 0 ? 'summary-card--teal' : 'summary-card--red-soft'">
+        <span class="summary-icon"><i class="fa-solid fa-wallet"></i></span>
+        <div class="summary-body">
+          <span class="summary-label">Saldo atual</span>
+          <strong class="summary-value" :class="resumoGeral.saldo >= 0 ? 'valor-receita' : 'valor-despesa'">{{ formatarValor(resumoGeral.saldo) }}</strong>
+          <span class="summary-sub">Resultado acumulado</span>
+        </div>
+      </article>
+
+      <article class="summary-card summary-card--blue">
+        <span class="summary-icon"><i class="fa-solid fa-receipt"></i></span>
+        <div class="summary-body">
+          <span class="summary-label">Transações</span>
+          <strong class="summary-value">{{ resumoGeral.quantidade }}</strong>
+          <span class="summary-sub">Total cadastradas</span>
+        </div>
+      </article>
     </div>
 
-    <!-- Formulário nova transação -->
-    <div class="form-nova">
-      <label class="field">
-        Descrição
-        <input v-model="descricao" placeholder="Ex: Aluguel, Salário..." />
-      </label>
-      <div class="form-row-3">
-        <label class="field">
-          Valor (R$)
-          <input v-model="valor" type="number" step="0.01" min="0.01" placeholder="0,00" />
-        </label>
-        <label class="field">
-          Tipo
-          <select v-model="tipo">
-            <option value="despesa">💸 Despesa</option>
-            <option value="receita">💰 Receita</option>
-          </select>
-        </label>
-        <label class="field">
-          Categoria
-          <select v-model="categoria">
-            <option value="" disabled>Selecione...</option>
-            <option v-for="cat in categorias" :key="cat.id" :value="cat.nome">{{ cat.nome }}</option>
-          </select>
-        </label>
+    <div class="action-strip card">
+      <div class="action-strip-main">
+        <button @click="mostrarFormulario ? fecharFormulario() : abrirFormulario()">
+          <i class="fa-solid fa-plus"></i>
+          {{ mostrarFormulario ? 'Fechar criação' : 'Nova transação' }}
+        </button>
+        <button class="secondary" @click="abrirCategorias">
+          <i class="fa-solid fa-tags"></i>
+          Gerenciar categorias
+        </button>
       </div>
-      <p v-if="erro" class="error"><i class="fa-solid fa-triangle-exclamation"></i> {{ erro }}</p>
-      <button @click="salvar"><i class="fa-solid fa-plus"></i> Adicionar transação</button>
+
+      <div class="action-strip-filters">
+        <button class="chip-filter" :class="filtroTipo === 'todos' && 'chip-filter--active'" @click="filtroTipo = 'todos'">Todas</button>
+        <button class="chip-filter" :class="filtroTipo === 'receita' && 'chip-filter--active'" @click="filtroTipo = 'receita'">Receitas</button>
+        <button class="chip-filter" :class="filtroTipo === 'despesa' && 'chip-filter--active'" @click="filtroTipo = 'despesa'">Despesas</button>
+      </div>
     </div>
 
-    <!-- ── FILTROS AVANÇADOS ── -->
-    <div class="filtros-box">
-      <div class="filtros-titulo">
-        <span>🔍 Filtros</span>
-        <button class="secondary btn-sm" @click="limparFiltros">
-          <i class="fa-solid fa-xmark"></i> Limpar
+    <transition name="panel-slide">
+      <section v-if="mostrarFormulario" class="card composer-card">
+        <div class="composer-header">
+          <div>
+            <span class="section-eyebrow">Novo lançamento</span>
+            <h2>Adicionar transação</h2>
+            <p class="muted">Preencha os dados abaixo para registrar uma nova movimentação.</p>
+          </div>
+          <button class="secondary btn-sm" @click="fecharFormulario">
+            <i class="fa-solid fa-xmark"></i>
+            Fechar
+          </button>
+        </div>
+
+        <div class="form-nova">
+          <label class="field field--wide">
+            Descrição
+            <input v-model="descricao" placeholder="Ex: Aluguel, salário, supermercado..." />
+          </label>
+
+          <div class="tipo-toggle">
+            <button class="tipo-btn" :class="tipo === 'receita' ? 'active-receita' : ''" @click="tipo = 'receita'" type="button">
+              <i class="fa-solid fa-arrow-trend-up"></i>
+              Receita
+            </button>
+            <button class="tipo-btn" :class="tipo === 'despesa' ? 'active-despesa' : ''" @click="tipo = 'despesa'" type="button">
+              <i class="fa-solid fa-arrow-trend-down"></i>
+              Despesa
+            </button>
+          </div>
+
+          <div class="form-row-3">
+            <label class="field">
+              Valor (R$)
+              <input v-model="valor" type="number" step="0.01" min="0.01" placeholder="0,00" />
+            </label>
+
+            <label class="field">
+              Categoria
+              <select v-model="categoria">
+                <option value="" disabled>Selecione...</option>
+                <option v-for="cat in categorias" :key="cat.id" :value="cat.nome">{{ cat.nome }}</option>
+              </select>
+            </label>
+          </div>
+
+          <p v-if="erro" class="error"><i class="fa-solid fa-triangle-exclamation"></i> {{ erro }}</p>
+
+          <div class="composer-actions">
+            <button @click="salvar">
+              <i class="fa-solid fa-check"></i>
+              Salvar transação
+            </button>
+            <button class="secondary" @click="fecharFormulario">
+              <i class="fa-solid fa-xmark"></i>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </section>
+    </transition>
+
+    <section class="card filtros-card">
+      <div class="filtros-header">
+        <div>
+          <span class="section-eyebrow">Filtrar resultados</span>
+          <h2>Explorar histórico</h2>
+        </div>
+        <button class="secondary btn-sm" @click="limparFiltros" :disabled="!filtrosAtivos">
+          <i class="fa-solid fa-xmark"></i>
+          Limpar
         </button>
       </div>
 
       <div class="filtros-grid">
-        <!-- Busca -->
-        <label class="field" style="margin:0">
+        <label class="field field--search">
           Buscar
-          <input v-model="filtroBusca" placeholder="Buscar descrição..." class="input-busca" />
+          <input v-model="filtroBusca" placeholder="Buscar por descrição..." class="input-busca" />
         </label>
 
-        <!-- Tipo -->
-        <label class="field" style="margin:0">
+        <label class="field">
           Tipo
           <select v-model="filtroTipo">
             <option value="todos">Todos</option>
-            <option value="receita">💰 Receitas</option>
-            <option value="despesa">💸 Despesas</option>
+            <option value="receita">Receitas</option>
+            <option value="despesa">Despesas</option>
           </select>
         </label>
 
-        <!-- Categoria -->
-        <label class="field" style="margin:0">
+        <label class="field">
           Categoria
           <select v-model="filtroCategoria">
             <option value="todas">Todas</option>
@@ -355,66 +530,129 @@ watch(() => authStore.user, (newUser) => {
           </select>
         </label>
 
-        <!-- Data de -->
-        <label class="field" style="margin:0">
+        <label class="field">
           De
           <input v-model="filtroDataDe" type="date" />
         </label>
 
-        <!-- Data até -->
-        <label class="field" style="margin:0">
+        <label class="field">
           Até
           <input v-model="filtroDataAte" type="date" />
         </label>
       </div>
-    </div>
+    </section>
 
-    <!-- Resumo dos filtrados -->
-    <div class="resumo-filtrado" v-if="transacoesFiltradas.length">
-      <span class="muted">{{ transacoesFiltradas.length }} resultado(s)</span>
-      <span class="valor-receita">+{{ formatarValor(totalFiltrado.receitas) }}</span>
-      <span class="valor-despesa">-{{ formatarValor(totalFiltrado.despesas) }}</span>
-    </div>
-
-    <!-- Lista -->
-    <ul v-if="transacoesFiltradas.length">
-      <li v-for="t in transacoesFiltradas" :key="t.id" class="transacao-item">
-        <div class="transacao-info">
-          <span class="transacao-desc">{{ t.descricao }}</span>
-          <span class="transacao-meta muted">{{ t.categoria }} · {{ formatarData(t.criadoEm) }}</span>
+    <section class="card transacoes-list-card">
+      <div class="list-header">
+        <div>
+          <span class="section-eyebrow">Lista principal</span>
+          <h2>Movimentações</h2>
+          <p class="muted">Acompanhe as transações registradas e use os filtros para refinar sua visão.</p>
         </div>
-        <div class="transacao-direita">
-          <span class="transacao-valor" :class="t.tipo === 'receita' ? 'valor-receita' : 'valor-despesa'">
-            {{ t.tipo === 'receita' ? '+' : '-' }} {{ formatarValor(t.valor) }}
-          </span>
-          <div class="transacao-acoes">
-            <button class="btn-icone" @click="abrirEdicao(t)" title="Editar">
-              <i class="fa-solid fa-pen"></i>
-            </button>
-            <button class="btn-icone danger" @click="excluir(t.id)" title="Excluir">
+
+        <div class="list-summary">
+          <span class="chip chip-info"><i class="fa-solid fa-filter"></i> {{ totalFiltrado.quantidade }} resultado(s)</span>
+          <span class="chip chip-success">+ {{ formatarValor(totalFiltrado.receitas) }}</span>
+          <span class="chip chip-danger">- {{ formatarValor(totalFiltrado.despesas) }}</span>
+        </div>
+      </div>
+
+      <div v-if="transacoesFiltradas.length" class="transactions-list">
+        <article v-for="t in transacoesFiltradas" :key="t.id" class="transacao-row">
+          <div class="transacao-main">
+            <div class="transacao-badge" :class="t.tipo === 'receita' ? 'is-receita' : 'is-despesa'">
+              <i :class="`fa-solid ${t.tipo === 'receita' ? 'fa-arrow-down-long' : 'fa-arrow-up-long'}`"></i>
+            </div>
+
+            <div class="transacao-info">
+              <div class="transacao-topline">
+                <span class="transacao-desc">{{ t.descricao }}</span>
+                <span class="transacao-category">{{ t.categoria }}</span>
+                <span v-if="isMetaMovimentacao(t)" class="transacao-tag">Cofrinho</span>
+              </div>
+              <span class="transacao-meta">{{ formatarData(t.criadoEm) }}</span>
+            </div>
+          </div>
+
+          <div class="transacao-side">
+            <span class="transacao-valor" :class="t.tipo === 'receita' ? 'valor-receita' : 'valor-despesa'">
+              {{ t.tipo === 'receita' ? '+' : '-' }} {{ formatarValor(t.valor) }}
+            </span>
+
+            <div class="transacao-acoes">
+              <button class="btn-icone" @click="abrirEdicao(t)" title="Editar">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btn-icone danger" @click="excluir(t.id)" title="Excluir">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div v-else class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-receipt"></i></div>
+        <span class="empty-title">Nenhuma transação encontrada</span>
+        <span class="empty-sub">Cadastre sua primeira movimentação ou ajuste os filtros para ampliar os resultados.</span>
+        <button @click="abrirFormulario">
+          <i class="fa-solid fa-plus"></i>
+          Adicionar primeira transação
+        </button>
+      </div>
+    </section>
+  </section>
+
+  <div v-if="modalCategorias" class="modal-overlay" @click.self="fecharCategorias">
+    <section class="card modal modal-categorias">
+      <div class="modal-header">
+        <div>
+          <span class="section-eyebrow">Organização</span>
+          <h2><i class="fa-solid fa-tags"></i> Gerenciar categorias</h2>
+        </div>
+        <button class="secondary btn-sm" @click="fecharCategorias">
+          <i class="fa-solid fa-xmark"></i>
+          Fechar
+        </button>
+      </div>
+
+      <div class="cat-manager">
+        <div class="cat-form">
+          <input v-model="novaCategoria" placeholder="Nova categoria..." @keyup.enter="adicionarCategoria" />
+          <button @click="adicionarCategoria"><i class="fa-solid fa-plus"></i> Adicionar</button>
+        </div>
+        <p v-if="erroCategoria" class="error"><i class="fa-solid fa-triangle-exclamation"></i> {{ erroCategoria }}</p>
+
+        <div v-if="categorias.length" class="cat-lista">
+          <div v-for="cat in categorias" :key="cat.id" class="cat-item">
+            <span>{{ cat.nome }}</span>
+            <button class="btn-icone danger" @click="excluirCategoria(cat.id)" title="Excluir categoria">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
         </div>
-      </li>
-    </ul>
-    <p v-else class="muted">Nenhuma transação encontrada com os filtros aplicados.</p>
 
-  </section>
+        <div v-else class="empty-state empty-state--compact">
+          <div class="empty-icon"><i class="fa-solid fa-tags"></i></div>
+          <span class="empty-title">Nenhuma categoria criada</span>
+          <span class="empty-sub">Crie categorias para organizar melhor suas movimentações.</span>
+        </div>
+      </div>
+    </section>
+  </div>
 
-  <!-- Modal edição -->
   <div v-if="modalAberto" class="modal-overlay" @click.self="modalAberto = false">
     <section class="card modal">
-      <h2><i class="fa-solid fa-pen"></i> Editar Transação</h2>
-      <label class="field">Descrição<input v-model="editDescricao" /></label>
+      <h2><i class="fa-solid fa-pen"></i> Editar Transacao</h2>
+      <label class="field">Descricao<input v-model="editDescricao" /></label>
+
+      <div class="tipo-toggle">
+        <button class="tipo-btn" :class="editTipo === 'receita' ? 'active-receita' : ''" @click="editTipo = 'receita'" type="button">Receita</button>
+        <button class="tipo-btn" :class="editTipo === 'despesa' ? 'active-despesa' : ''" @click="editTipo = 'despesa'" type="button">Despesa</button>
+      </div>
+
       <div class="form-row-3">
         <label class="field">Valor (R$)<input v-model="editValor" type="number" step="0.01" min="0.01" /></label>
-        <label class="field">Tipo
-          <select v-model="editTipo">
-            <option value="despesa">💸 Despesa</option>
-            <option value="receita">💰 Receita</option>
-          </select>
-        </label>
         <label class="field">Categoria
           <select v-model="editCategoria">
             <option value="" disabled>Selecione...</option>
@@ -430,124 +668,3 @@ watch(() => authStore.user, (newUser) => {
     </section>
   </div>
 </template>
-
-<style scoped>
-.topo-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
-.btn-sm { font-size: 0.8rem !important; padding: 7px 14px !important; }
-
-.cat-manager {
-  margin: 14px 0; padding: 18px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--glass-border); border-radius: 14px;
-  animation: fadeUp 0.3s ease;
-}
-@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-.cat-form { display: flex; gap: 10px; margin-bottom: 12px; }
-.cat-form input {
-  flex: 1; padding: 10px 14px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px; color: var(--text);
-  font-family: inherit; font-size: 0.95rem; outline: none;
-}
-.cat-form input:focus { border-color: var(--accent); }
-.cat-form input::placeholder { color: var(--text-muted); }
-.cat-lista { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.cat-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--glass-border); border-radius: 999px;
-  font-size: 0.86rem; color: var(--text-soft);
-}
-
-.form-nova { margin: 18px 0; display: grid; gap: 10px; }
-.form-row-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-
-select {
-  padding: 11px 13px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px; color: var(--text);
-  font-family: inherit; font-size: 0.95rem; outline: none;
-  cursor: pointer; width: 100%; transition: border-color 0.2s;
-}
-select:focus { border-color: var(--accent); }
-select option { background: #0c1518; color: var(--text); }
-
-/* Filtros avançados */
-.filtros-box {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin: 16px 0;
-}
-.filtros-titulo {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
-  font-size: 0.85rem; font-weight: 600; color: var(--text-soft);
-}
-.filtros-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-.filtros-grid input[type="date"] {
-  padding: 11px 13px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px; color: var(--text);
-  font-family: inherit; font-size: 0.95rem; outline: none; width: 100%;
-  transition: border-color 0.2s;
-}
-.filtros-grid input[type="date"]:focus { border-color: var(--accent); }
-.input-busca {
-  padding: 11px 13px; width: 100%;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px; color: var(--text);
-  font-family: inherit; font-size: 0.95rem; outline: none;
-}
-.input-busca::placeholder { color: var(--text-muted); }
-.input-busca:focus { border-color: var(--accent); }
-
-.resumo-filtrado {
-  display: flex; gap: 16px; align-items: center;
-  padding: 10px 0; font-size: 0.88rem; font-weight: 600;
-}
-
-/* Lista */
-.transacao-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;
-}
-.transacao-item:last-child { border-bottom: none; }
-.transacao-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.transacao-desc { font-weight: 600; color: var(--text); font-size: 0.93rem; }
-.transacao-meta { font-size: 0.78rem; }
-.transacao-direita { display: flex; align-items: center; gap: 12px; }
-.transacao-valor { font-weight: 700; font-size: 0.93rem; white-space: nowrap; }
-.valor-receita { color: var(--success) !important; }
-.valor-despesa { color: var(--danger) !important; }
-.transacao-acoes { display: flex; gap: 5px; }
-
-.btn-icone {
-  padding: 7px 10px !important; font-size: 0.8rem !important;
-  background: rgba(255,255,255,0.04) !important;
-  color: var(--text-soft) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: none !important; animation: none !important;
-}
-.btn-icone::before { display: none !important; }
-.btn-icone:hover { background: var(--accent-dim) !important; color: var(--accent) !important; border-color: rgba(0,214,143,0.3) !important; transform: translateY(-1px) !important; }
-.btn-icone.danger:hover { background: var(--danger-dim) !important; color: var(--danger) !important; border-color: rgba(255,80,80,0.3) !important; }
-
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.82);
-  backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 100;
-}
-.modal { max-width: 500px; width: 100%; animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
-@keyframes popIn { from { opacity:0; transform:scale(0.88); } to { opacity:1; transform:scale(1); } }
-</style>

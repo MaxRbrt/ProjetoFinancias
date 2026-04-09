@@ -15,8 +15,8 @@ import './style.css'
 const pinia = createPinia()
 let app
 
-// Aguarda o Firebase verificar o estado de autenticação
-// antes de montar o app — evita "flash" de tela
+// Aguarda a primeira resposta do Firebase Auth antes de montar a aplicação.
+// Isso evita renderização temporária em estado incorreto.
 onAuthStateChanged(auth, (user) => {
   const authStore = useAuthStore(pinia)
   authStore.setUser(user)
