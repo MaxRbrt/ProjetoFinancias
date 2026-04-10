@@ -513,3 +513,78 @@
     align-items: flex-start;
   }
 }
+
+.transacoes-header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.period-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 190px;
+}
+
+.period-control-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.period-select {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.period-select option {
+  color: #0b0f14;
+}
+
+@media (max-width: 720px) {
+  .transacoes-header-actions {
+    width: 100%;
+  }
+
+  .period-control {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .transacoes-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.period-select,
+.filtros-grid input[type="date"] {
+  color-scheme: dark;
+}
+
+.period-select option {
+  background: #111821;
+  color: #f4f7fb;
+}
+
+.filtros-grid input[type="date"] {
+  cursor: pointer;
+}
+
+.filtros-grid input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1) opacity(0.9);
+}

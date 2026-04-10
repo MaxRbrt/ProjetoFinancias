@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "firebase": "^12.11.0",
-    "pinia": "^3.0.4",
-    "vue-router": "^5.0.4"
-  }
-}

@@ -8,11 +8,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
+import { signInWithDemoSupport } from '../demo-user'
 import { useAuthStore } from '../stores/authStore'
 import '../styles/views/LoginView.css'
 
@@ -66,7 +66,7 @@ const entrar = async () => {
   }
   loginCarregando.value = true
   try {
-    await signInWithEmailAndPassword(auth, loginEmail.value, loginSenha.value)
+    await signInWithDemoSupport(auth, loginEmail.value, loginSenha.value)
     router.push('/')
   } catch (e) {
     loginErro.value = 'E-mail ou senha incorretos.'

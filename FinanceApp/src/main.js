@@ -10,6 +10,7 @@ import App from './App.vue'
 import router from './router'
 import { auth } from './firebase/config'
 import { useAuthStore } from './stores/authStore'
+import { ensureDemoUserSeed } from './demo-user'
 import './style.css'
 
 const pinia = createPinia()
@@ -17,7 +18,14 @@ let app
 
 // Aguarda a primeira resposta do Firebase Auth antes de montar a aplicação.
 // Isso evita renderização temporária em estado incorreto.
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    try {
+      await ensureDemoUserSeed(user)
+    } catch (error) {
+      console.error('Erro ao preparar o usu?rio demo:', error)
+    }
+  }
   const authStore = useAuthStore(pinia)
   authStore.setUser(user)
   authStore.setAuthReady()
